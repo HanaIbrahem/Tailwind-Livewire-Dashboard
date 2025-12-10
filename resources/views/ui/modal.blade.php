@@ -2,7 +2,7 @@
    
     <!-- You can open the modal using ID.showModal() method -->
 
-    <x-modal.modal header="Hello" button="open me" message="Pleas conflerm">
+    <x-modal.modal btnsize="lg"  variant="info" header="Hello" button="open me" message="Pleas conflerm">
 
     </x-modal.modal>
  

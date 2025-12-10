@@ -49,14 +49,14 @@
 
                 {{-- Export --}}
                 <div class="join">
-                    <button class="btn btn-sm btn-success join-item gap-1" wire:click="export('xlsx')">
+                    <button title="EXCEL Report" class="btn btn-sm btn-success join-item gap-1" wire:click="export('xlsx')">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M5 20h14v-2H5v2Zm7-3 5-6h-3V4h-4v7H7l5 6Z" />
                         </svg>
                         <span class="hidden sm:inline">Excel</span>
                     </button>
 
-                    <button class="btn btn-sm btn-error ms-2 join-item gap-1" wire:click="export('pdf')">
+                    <button title="PDF Report"  class="btn btn-sm btn-error ms-2 join-item gap-1" wire:click="export('pdf')">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M5 20h14v-2H5v2Zm7-3 5-6h-3V4h-4v7H7l5 6Z" />
                         </svg>
@@ -263,6 +263,7 @@
                                             @foreach ($this->actions() as $action)
                                                 @if ($action['type'] === 'route')
                                                     <x-ui.button  wire:navigate
+                                                        variant="{{ $action['variant'] }}"
                                                         href="{{ route($action['route'], $r->id) }}"
                                                         title="{{ $action['label'] }}"
                                                         class="{{ $action['class'] ?? '' }}">
@@ -270,6 +271,7 @@
                                                     </x-ui.button>
                                                 @elseif ($action['type'] === 'method')
                                                     <x-ui.button type="button"
+                                                        variant="{{ $action['variant'] }}"
                                                         wire:click="{{ $action['method'] }}({{ $r->id }})"
                                                         title="{{ $action['label'] }}"
                                                         class="{{ $action['class'] ?? '' }}">
@@ -330,17 +332,19 @@
                                                 @foreach ($this->actions() as $action)
                                                     @if ($action['type'] === 'route')
                                                         <x-ui.button  wire:navigate
-                                                            href="{{ route($action['route'], $r->id) }}"
-                                                            title="{{ $action['label'] }}"
-                                                            class="{{ $action['class'] ?? '' }}">
-                                                            {{ $action['content'] }}
+                                                        variant="{{ $action['variant'] }}"
+                                                        href="{{ route($action['route'], $r->id) }}"
+                                                        title="{{ $action['label'] }}"
+                                                        class="{{ $action['class'] ?? '' }}">
+                                                        {{ $action['content'] }}
                                                         </x-ui.button>
                                                     @elseif ($action['type'] === 'method')
                                                         <x-ui.button type="button"
-                                                            wire:click="{{ $action['method'] }}({{ $r->id }})"
-                                                            title="{{ $action['label'] }}"
-                                                            class="{{ $action['class'] ?? '' }}">
-                                                            {{ $action['content'] }}
+                                                        variant="{{ $action['variant'] }}"  
+                                                        wire:click="{{ $action['method'] }}({{ $r->id }})"
+                                                        title="{{ $action['label'] }}"
+                                                        class="{{ $action['class'] ?? '' }}">
+                                                        {{ $action['content'] }}
 
                                                         </x-ui.button>
                                                     @endif

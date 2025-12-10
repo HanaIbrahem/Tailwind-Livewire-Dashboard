@@ -131,8 +131,8 @@ class UserTable extends DataTable
                 'content' => 'show',
                 'route' => 'user.show',    // route name
                 'param' => 'id',
-                'class' => 'btn btn-danger btn-xs hover:text-gray-200'
-
+                'class' => 'btn btn-xs hover:text-gray-200',
+                'variant'=>'info'
             ],
             // Delete -> Livewire function
             [
@@ -142,6 +142,8 @@ class UserTable extends DataTable
                 'class' => 'btn btn-danger btn-xs hover:text-gray-700',
                 'method' => 'delete', // Livewire method on this component
                 'param' => 'id',              // row field to pass as argument
+                'variant'=>'error'
+           
             ]
         ];
     }

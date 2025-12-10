@@ -5,16 +5,22 @@
     'message' => '',
     // modal header
     'header' => '',
+    // open button size
+    'btnsize'=>'sm',
+    // button type
+    'variant'=>'primary',
+    // button class
+    'btnclass'=>''
 ])
 @php
     // if we have more than one modal we need a uniqid 
     $modalid= $attributes->get('id')?? 'modal'.uniqid();
 @endphp
-<div>
+<div class="m-1">
 
 
     {{-- show button  --}}
-    <x-ui.button  class="text-gray-200" onclick="{{ $modalid }}.showModal()">{{ $button }}</x-ui.button>
+    <x-ui.button  variant="{{ $variant }}" size="{{$btnsize }}" class="{{ $btnclass }}" onclick="{{ $modalid }}.showModal()">{{ $button }}</x-ui.button>
     
     {{-- modal content --}}
     <dialog id="{{ $modalid }}"   onclick="if (event.target === this) this.close()"  class="modal">
