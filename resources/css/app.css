@@ -1,0 +1,109 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@import 'tailwindcss';
+
+/* Tailwind sources */
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+/* App theme tokens */
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif,
+    'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/* DaisyUI configuration */
+@plugin "daisyui" {
+  themes: corporate --default, dark;
+}
+
+/* === Components === */
+@layer components {
+  .row-odd  { @apply bg-base-100/50; }
+  .row-even { @apply bg-base-300; }
+  .hover-row { @apply transition-colors hover:bg-primary/5; }
+
+  .border-b-base td { @apply border-b border-base-300/60; }
+}
+
+/* === Custom Utilities === */
+
+/* Inter font helper */
+.font-inter {
+  font-family: 'Inter', sans-serif;
+}
+
+/* === Stable, thin scrollbars that "appear" on hover (no layout shift) === */
+:root {
+  --sb-size: 2px;
+  --sb-radius: 9999px;
+  --sb-thumb: rgba(100, 100, 100, 0.30);
+  --sb-thumb-hover: rgba(100, 100, 100, 0.55);
+}
+
+/* Example: adjust thumb colors for the corporate theme */
+html[data-theme="corporate"] {
+  --sb-thumb: rgba(255, 255, 255, 0.20);
+  --sb-thumb-hover: rgba(255, 255, 255, 0.40);
+}
+
+/* Scroll containers */
+.sidebar-scroll,
+.content-scroll,
+.table-scroll {
+  /* prevent jump even in classic-scrollbar OS */
+  scrollbar-gutter: stable both-edges;
+
+  /* Firefox: keep width thin ALWAYS; hide the thumb by making it transparent */
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent; /* thumb transparent by default */
+}
+
+/* Firefox: show thumb color on hover only */
+.sidebar-scroll:hover,
+.content-scroll:hover,
+.table-scroll:hover {
+  scrollbar-color: var(--sb-thumb) transparent;
+}
+
+/* WebKit (Chrome/Edge/Safari): keep width constant ALWAYS */
+.sidebar-scroll::-webkit-scrollbar,
+.content-scroll::-webkit-scrollbar,
+.table-scroll::-webkit-scrollbar {
+  width: var(--sb-size);
+  height: var(--sb-size);
+}
+
+/* Track stays transparent */
+.sidebar-scroll::-webkit-scrollbar-track,
+.content-scroll::-webkit-scrollbar-track,
+.table-scroll::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 4px 0; /* optional top/bottom gap */
+}
+
+/* Thumb is transparent by default -> looks hidden but width is reserved */
+.sidebar-scroll::-webkit-scrollbar-thumb,
+.content-scroll::-webkit-scrollbar-thumb,
+.table-scroll::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: var(--sb-radius);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+/* On hover: reveal thumb color (no width change -> no shift) */
+.sidebar-scroll:hover::-webkit-scrollbar-thumb,
+.content-scroll:hover::-webkit-scrollbar-thumb,
+.table-scroll:hover::-webkit-scrollbar-thumb {
+  background-color: var(--sb-thumb);
+}
+
+/* Stronger color when directly hovering the thumb */
+.sidebar-scroll:hover::-webkit-scrollbar-thumb:hover,
+.content-scroll:hover::-webkit-scrollbar-thumb:hover,
+.table-scroll:hover::-webkit-scrollbar-thumb:hover {
+  background-color: var(--sb-thumb-hover);
+}

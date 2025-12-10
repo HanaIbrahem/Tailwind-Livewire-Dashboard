@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @livewireStyles
+
+    <link rel="shortcut icon" href="{{ asset('logo-small.png') }}" type="image/x-icon">
+
+    <title>
+        
+    </title>
+</head>
+
+<body class="font-inter bg-base-200 text-base-content">
+    <div class="drawer lg:drawer-open h-screen">
+        <input id="sidebar-toggle" type="checkbox" class="drawer-toggle" />
+
+        <!-- Main Content -->
+        <div class="drawer-content flex flex-col h-screen overflow-hidden">
+
+            <!-- Header -->
+            <x-layouts.header />
+
+            <!-- Page Content -->
+            <main class="flex-1 overflow-y-scroll content-scroll p-1 md:pt-4 md:ps-4 space-y-6">
+                {{ $slot }}
+            </main>
+        </div>
+
+        <!-- Sidebar -->
+        <x-layouts.sidebar />
+    </div>
+  
+    <x-toasts/>
+
+
+    <script>
+        (function() {
+            const saved = localStorage.getItem('theme');
+            if (saved) {
+                document.documentElement.setAttribute('data-theme', saved);
+            }
+        })();
+    </script>
+
+    @livewireScripts
+
+
+</body>
+
+</html>

@@ -1,0 +1,470 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Livewire\Table;
+
+use Livewire\Component;
+
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Arr;
+use Livewire\WithPagination;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\DataTableExport;
+use Mpdf\Mpdf;
+abstract class DataTable extends Component
+{
+
+    use WithPagination;
+
+    protected $queryString = [
+        'q' => ['except' => ''],
+        'sortField' => ['except' => 'id'],
+        'sortDirection' => ['except' => 'asc'],
+        'perPage' => ['except' => 10],
+    ];
+
+    public int $perPage = 10;
+    public array $perPageOptions = [10, 50, 100];
+
+    public string $title = '';
+    public string $q = '';
+    public string $sortField = 'id';
+    public string $sortDirection = 'asc';
+    public array $filters = [];
+
+    public $sortbydate = false;
+    abstract protected function modelClass(): string;
+    abstract protected function columns(): array;
+
+    /** Hook: children can override to add base where / joins / scopes */
+    protected function baseQuery(): Builder
+    {
+        $model = $this->modelClass();
+        /** @var Builder $query */
+        return $model::query();
+    }
+
+    // for actions like delete,edit others
+    
+    public function actions(): array
+    {
+        return [];
+    }
+    /** Hook: child can react to toggles (logging etc.) */
+    protected function afterToggle(object $row, string $field): void
+    {
+        // default: no-op
+    }
+
+    protected $paginationTheme = 'tailwind';
+    public function paginationView()
+    {
+        return 'vendor.livewire.tailwind';
+    }
+    public function paginationSimpleView()
+    {
+        return 'vendor.livewire.simple-tailwind';
+    }
+
+
+    public function mount(): void
+    {
+        // Initialize column filters once
+        foreach ($this->columns() as $c) {
+            $type = $c['filter'] ?? $this->defaultFilterForType($c['type'] ?? 'text');
+            if ($type !== 'none') {
+                $this->filters[$this->filterBindingKey($c)] = '';
+            }
+        }
+    }
+
+    public function updated($name): void
+    {
+        if (
+            $name === 'q' || $name === 'perPage' ||
+            str_starts_with($name, 'filters.') ||
+            $name === 'sortField' || $name === 'sortDirection'
+        ) {
+            $this->resetPage();
+        }
+    }
+
+    public function updatedPerPage($value): void
+    {
+        $v = (int) $value;
+        if (!in_array($v, $this->perPageOptions, true)) {
+            $v = 10;
+        }
+        $this->perPage = $v;
+    }
+
+    public function clearFilters(): void
+    {
+        $this->q = '';
+        foreach ($this->columns() as $c) {
+            $type = $c['filter'] ?? $this->defaultFilterForType($c['type'] ?? 'text');
+            if ($type !== 'none') {
+                $this->filters[$this->filterBindingKey($c)] = '';
+            }
+
+        }
+        $this->resetPage();
+    }
+
+    public function sortBy(string $field): void
+    {
+        $cols = collect($this->columns())->keyBy('field');
+        if (!$cols->has($field) || !($cols[$field]['sortable'] ?? true)) {
+            return;
+        }
+
+        if ($this->sortField === $field) {
+            $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            $this->sortField = $field;
+            $this->sortDirection = 'asc';
+        }
+        $this->resetPage();
+    }
+
+    /** Generic toggle, plus hook for children */
+    public function toggle(string $field, int $id): void
+    {
+        $model = $this->modelClass();
+        $row = $model::query()->findOrFail($id);
+
+        $row->{$field} = !(bool) $row->{$field};
+        $row->save();
+
+        $this->afterToggle($row, $field);
+
+        session()->flash('ok', 'Updated.');
+    }
+
+    // ---------------- helpers ----------------
+
+    protected function parseRelationField(string $field): ?array
+    {
+        if (strpos($field, '.') === false) {
+            return null;
+        }
+        $parts = explode('.', $field);
+        $column = array_pop($parts);
+        $relation = implode('.', $parts);
+        return [$relation, $column];
+    }
+
+    protected function filterBindingKey(array $c): string
+    {
+        return $c['filter_key'] ?? str_replace('.', '__', $c['field']);
+    }
+
+    protected function relationsFromColumns(array $cols): array
+    {
+        $with = [];
+        foreach ($cols as $c) {
+            $candidates = array_filter([
+                $c['field'] ?? null,
+                ...((array) ($c['filter_on'] ?? [])),
+                ...((array) ($c['search_on'] ?? [])),
+            ]);
+
+            foreach ($candidates as $cand) {
+                if ($rc = $this->parseRelationField($cand)) {
+                    $with[] = $rc[0];
+                }
+            }
+        }
+        return array_values(array_unique($with));
+    }
+
+    protected function statusField(): ?string
+    {
+        foreach ($this->columns() as $c) {
+            if (($c['type'] ?? 'text') === 'boolean' && ($c['status'] ?? false)) {
+                return $c['field'];
+            }
+        }
+        foreach ($this->columns() as $c) {
+            if (($c['type'] ?? 'text') === 'boolean') {
+                return $c['field'];
+            }
+        }
+        return null;
+    }
+
+    public function toggleStatus(int $id): void
+    {
+        if ($field = $this->statusField()) {
+            $this->toggle($field, $id);
+        }
+    }
+
+    public function edit(int $id): void
+    {
+        $this->dispatch('edit', id: $id);
+    }
+
+   
+
+    public function render()
+    {
+        $rows = $this->buildQuery()->paginate($this->perPage);
+
+        return view('table.data-table', [
+            'columns' => $this->columns(),
+            'rows' => $rows,
+            'title' => $this->title ?: class_basename($this->modelClass()),
+        ]);
+    }
+
+    protected function tryOrderByBelongsTo(Builder $query, string $relationPath, string $column, string $dir): bool
+    {
+        $modelClass = $this->modelClass();
+        $model = new $modelClass;
+
+        if (str_contains($relationPath, '.')) {
+            return false; // one hop only
+        }
+        if (!method_exists($model, $relationPath)) {
+            return false;
+        }
+
+        $rel = $model->{$relationPath}();
+        if (!$rel instanceof BelongsTo) {
+            return false;
+        }
+
+        $related = $rel->getRelated();
+        $relatedTable = $related->getTable();
+        $target = "{$relatedTable}.{$column}";
+
+        $sub = $related->newQuery()
+            ->select($target)
+            ->whereColumn($rel->getQualifiedOwnerKeyName(), $rel->getQualifiedForeignKeyName())
+            ->limit(1);
+
+        $query->orderBy($sub, $dir);
+        return true;
+    }
+
+    /** MAIN: now uses baseQuery() so children can override only that */
+    protected function buildQuery(): Builder
+    {
+        $query = $this->baseQuery();
+        $cols = $this->columns();
+
+        // 1) Eager-load relations
+        $with = $this->relationsFromColumns($cols);
+        if (!empty($with)) {
+            $query->with($with);
+        }
+
+        // 2) Global search
+        if ($this->q !== '') {
+            $needle = trim($this->q);
+            $lower = mb_strtolower($needle);
+            $searchables = array_values(array_filter($cols, fn($c) => $c['searchable'] ?? true));
+
+            $query->where(function (Builder $sub) use ($searchables, $needle, $lower) {
+                foreach ($searchables as $c) {
+                    $targets = (array) ($c['search_on'] ?? [$c['field']]);
+                    foreach ($targets as $target) {
+                        if ($rc = $this->parseRelationField($target)) {
+                            [$relation, $column] = $rc;
+                            $sub->orWhereHas($relation, function (Builder $q) use ($column, $needle) {
+                                $q->where($column, 'like', "%{$needle}%");
+                            });
+                        } else {
+                            $type = $c['type'] ?? 'text';
+                            if ($type === 'text') {
+                                $sub->orWhere($target, 'like', "%{$needle}%");
+                            } elseif ($type === 'number' && is_numeric($needle)) {
+                                $sub->orWhere($target, (int) $needle);
+                            } elseif ($type === 'boolean') {
+                                if (in_array($lower, ['1', 'true', 'yes', 'active', 'enabled', 'on', 'فعال'], true)) {
+                                    $sub->orWhere($target, 1);
+                                }
+                                if (in_array($lower, ['0', 'false', 'no', 'inactive', 'disabled', 'off', 'غير فعال'], true)) {
+                                    $sub->orWhere($target, 0);
+                                }
+                            } elseif ($type === 'date') {
+                                if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $needle)) {
+                                    $sub->orWhereDate($target, $needle);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 3) Column filters
+        foreach ($cols as $c) {
+            $type = $c['type'] ?? 'text';
+            $filterT = $c['filter'] ?? $this->defaultFilterForType($type);
+
+            $bindKey = $this->filterBindingKey($c);
+            if (!array_key_exists($bindKey, $this->filters)) {
+                continue;
+            }
+
+            $val = $this->filters[$bindKey];
+            if ($val === '' || $val === null) {
+                continue;
+            }
+
+            $filterOn = (array) ($c['filter_on'] ?? $c['field']);
+
+            if ($filterT === 'text') {
+                $query->where(function (Builder $w) use ($filterOn, $val) {
+                    foreach ($filterOn as $target) {
+                        if ($rc = $this->parseRelationField($target)) {
+                            [$relation, $column] = $rc;
+                            $w->orWhereHas($relation, function (Builder $q) use ($column, $val) {
+                                $q->where($column, 'like', "%{$val}%");
+                            });
+                        } else {
+                            $w->orWhere($target, 'like', "%{$val}%");
+                        }
+                    }
+                });
+            } elseif ($filterT === 'select') {
+                foreach ($filterOn as $target) {
+                    if ($rc = $this->parseRelationField($target)) {
+                        [$relation, $column] = $rc;
+                        $query->whereHas($relation, fn(Builder $q) => $q->where($column, $val));
+                    } else {
+                        $query->where($target, $val);
+                    }
+                }
+            } elseif ($filterT === 'boolean') {
+                $bool = (bool) intval($val);
+                foreach ($filterOn as $target) {
+                    if ($rc = $this->parseRelationField($target)) {
+                        [$relation, $column] = $rc;
+                        $query->whereHas($relation, fn(Builder $q) => $q->where($column, $bool));
+                    } else {
+                        $query->where($target, $bool);
+                    }
+                }
+            } elseif ($filterT === 'date_range') {
+                $field = $c['field'];
+                $from = Arr::get($val, 'from');
+                $to = Arr::get($val, 'to');
+                if ($from) {
+                    $query->whereDate($field, '>=', $from);
+                }
+                if ($to) {
+                    $query->whereDate($field, '<=', $to);
+                }
+            }
+        }
+
+        // 4) Sorting
+        $sortable = array_column(array_filter($cols, fn($c) => $c['sortable'] ?? true), 'field');
+
+        if (in_array($this->sortField, $sortable, true)) {
+            if ($rc = $this->parseRelationField($this->sortField)) {
+                [$relation, $column] = $rc;
+                if (!$this->tryOrderByBelongsTo($query, $relation, $column, $this->sortDirection)) {
+                    $query->latest();
+                }
+            } else {
+                $query->orderBy($this->sortField, $this->sortDirection);
+            }
+        } else {
+            $query->latest();
+        }
+
+        return $query;
+    }
+
+    protected function defaultFilterForType(string $type): string
+    {
+        return match ($type) {
+            'boolean' => 'boolean',
+            'date' => 'none',
+            default => 'text',
+        };
+    }
+
+    public function export(string $format = 'xlsx')
+    {
+
+        $format = strtolower($format);
+        $basename = strtolower(class_basename($this->modelClass()));
+        $filename = $basename . '-' . now()->format('Ymd_His');
+
+        if ($format === 'xlsx') {
+            $columns = $this->columns();
+
+            // Use Maatwebsite\Excel
+            return Excel::download(
+                new DataTableExport($this->buildQuery(), $columns),
+                "{$filename}.xlsx"
+            );
+        }
+
+        if ($format === 'pdf') {
+            $rows = $this->buildQuery()->get();
+            $columns = $this->columns();
+
+            $dataRows = [];
+            foreach ($rows as $r) {
+                $dataRows[] = array_map(
+                    fn($c) => $this->formatExportValue($r, $c),
+                    $columns
+                );
+            }
+
+            $html = view('exports.table-pdf', [
+                'title' => $this->title ?: class_basename($this->modelClass()),
+                'columns' => $columns,
+                'rows' => $dataRows,
+            ])->render();
+
+            $mpdf = new Mpdf([
+                'mode' => 'utf-8',
+                'format' => 'A4',
+                'default_font' => 'dejavusans', // good for Arabic/Unicode
+            ]);
+
+            $mpdf->WriteHTML($html);
+
+            return response()->streamDownload(function () use ($mpdf) {
+                echo $mpdf->Output('', 'S'); // output as string to streamDownload
+            }, "{$filename}.pdf", ['Content-Type' => 'application/pdf']);
+        }
+
+        // Unknown format → silently do nothing or throw exception if you prefer
+        return;
+    }
+
+    protected function formatExportValue($row, array $col): string
+    {
+        $field = $col['field'] ?? '';
+        $type = $col['type'] ?? 'text';
+        $val = data_get($row, $field);
+
+        if ($type === 'boolean') {
+            $on = $col['options'][1] ?? 'Active';
+            $off = $col['options'][0] ?? 'Inactive';
+            return (string) ((bool) $val ? $on : $off);
+        }
+
+        if ($type === 'date' && !empty($col['format']) && $val) {
+            try {
+                return \Illuminate\Support\Carbon::parse($val)->format($col['format']);
+            } catch (\Throwable $e) {
+                return (string) $val;
+            }
+        }
+
+        return is_scalar($val) || $val === null
+            ? (string) $val
+            : json_encode($val, JSON_UNESCAPED_UNICODE);
+    }
+}
+
