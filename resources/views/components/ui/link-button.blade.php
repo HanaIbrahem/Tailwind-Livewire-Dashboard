@@ -1,4 +1,4 @@
-@props([
+ @props([
     // button type like primary secondary ....
     'variant' => 'primary',
     'size'    => 'sm',   
@@ -34,15 +34,9 @@
     $classes = trim("$base $variantClass $sizeClass");
 @endphp
 
-{{--two rypes of button href and button  --}}
-
-    <button
-        type="{{ $attributes->get('type', 'button') }}"
-        {{ $attributes->merge(['class' => $classes]) }}
-    >
+ <a {{ $attributes->merge(['class' => $classes]) }}>
         @if ($icon)
             <x-dynamic-component :component="$icon" class="w-4 h-4" />
         @endif
         {{ $slot }}
-    </button>
-
+    </a>

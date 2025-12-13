@@ -262,13 +262,13 @@
                                         <div class="flex items-center justify-end gap-1">
                                             @foreach ($this->actions() as $action)
                                                 @if ($action['type'] === 'route')
-                                                    <x-ui.button  wire:navigate
+                                                    <x-ui.link-button  wire:navigate
                                                         variant="{{ $action['variant'] }}"
                                                         href="{{ route($action['route'], $r->id) }}"
                                                         title="{{ $action['label'] }}"
                                                         class="{{ $action['class'] ?? '' }}">
                                                         {{ $action['content'] }}
-                                                    </x-ui.button>
+                                                    </x-ui.link-button>
                                                 @elseif ($action['type'] === 'method')
                                                     <x-ui.button type="button"
                                                         variant="{{ $action['variant'] }}"

@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Dashboard;
+use App\Livewire\Ui\Alert;
 use App\Livewire\Ui\Table;
 use App\Livewire\Ui\Modal;
 use App\Livewire\UserShow;
@@ -12,3 +13,4 @@ Route::get('/ui/table',Table::class)->name('table');
 Route::get('/user/{user}',UserShow::class)->name('user.show');
 
 Route::get('/ui/modal',Modal::class)->name('modal');
+Route::get('/ui/alert',Alert::class)->name('alert');

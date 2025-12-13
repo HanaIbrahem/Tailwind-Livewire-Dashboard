@@ -34,30 +34,24 @@
 
                     <span class="inline-flex items-center gap-2 ">
 
-                       
-                                <svg xmlns="http://www.w3.org/2000/svg"
-             viewBox="0 0 24 24"
-             fill="none"
-             stroke="currentColor"
-             stroke-width="1.8"
-             stroke-linecap="round"
-             stroke-linejoin="round"
-             class="w-5 h-5">
-          <rect x="3.5" y="5" width="17" height="14" rx="2.5" />
-          <path d="M3.5 8h17" />
-          <circle cx="17.5" cy="6.5" r="0.8" />
-          <circle cx="14.5" cy="6.5" r="0.8" />
-          <path d="M7 11h8" />
-          <path d="M7 14h5" />
-        </svg>
+
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5">
+                            <rect x="3.5" y="5" width="17" height="14" rx="2.5" />
+                            <path d="M3.5 8h17" />
+                            <circle cx="17.5" cy="6.5" r="0.8" />
+                            <circle cx="14.5" cy="6.5" r="0.8" />
+                            <path d="M7 11h8" />
+                            <path d="M7 14h5" />
+                        </svg>
 
 
                         <span>Modal</span>
                     </span>
-              
+
                 </x-nav.link>
 
-                         <x-nav.link route="table" match="table" class="mb-1">
+                <x-nav.link route="table" match="table" class="mb-1">
 
                     <span class="inline-flex items-center gap-2 ">
 
@@ -72,7 +66,23 @@
                     </span>
                 </x-nav.link>
 
-                <x-nav.group title="dashboard" match="dashboard.*" class="mb-1">
+                <x-nav.link route="alert" match="alert" class="mb-1">
+
+                    <span class="inline-flex items-center gap-2 ">
+
+                        <!-- Info -->
+                        <!-- Warning -->
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                            class="h-4 w-4 shrink-0 stroke-current" fill="none" aria-hidden="true" role="img">
+                            <path d="M12 9v2m0 4h.01M12 5a7 7 0 100 14 7 7 0 000-14z" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <span>Alert</span>
+                    </span>
+                </x-nav.link>
+
+
+                <x-nav.group title="Group" match="dashboard.*" class="mb-1">
 
                     <x-slot:icon>
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
