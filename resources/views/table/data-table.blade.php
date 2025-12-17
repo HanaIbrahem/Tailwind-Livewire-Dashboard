@@ -1,4 +1,4 @@
-<div class="space-y-4 table-scroll">
+<div class="space-y-4">
     {{-- Card wrapper --}}
     <div class="card bg-base-100 px-2 shadow-sm border border-base-300/60">
         {{-- Card header / toolbar --}}
@@ -49,18 +49,22 @@
 
                 {{-- Export --}}
                 <div class="join">
-                    <button title="EXCEL Report" class="btn btn-sm btn-success join-item gap-1" wire:click="export('xlsx')">
+                    <button title="EXCEL Report" wire:loading.class="opacity-50 cursor-wait" wire:target="export('xlsx')"
+                        class="btn btn-sm btn-success join-item gap-1" wire:click="export('xlsx')">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M5 20h14v-2H5v2Zm7-3 5-6h-3V4h-4v7H7l5 6Z" />
                         </svg>
                         <span class="hidden sm:inline">Excel</span>
+                        <span wire:loading wire:target="export('xlsx')" class="loading loading-spinner loading-xs"></span>
                     </button>
 
-                    <button title="PDF Report"  class="btn btn-sm btn-error ms-2 join-item gap-1" wire:click="export('pdf')">
+                    <button title="PDF Report" wire:loading.class="opacity-50 cursor-wait" wire:target="export('pdf')"
+                        class="btn btn-sm btn-error ms-2 join-item gap-1" wire:click="export('pdf')">
                         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
                             <path d="M5 20h14v-2H5v2Zm7-3 5-6h-3V4h-4v7H7l5 6Z" />
                         </svg>
                         <span class="hidden sm:inline">PDF</span>
+                        <span wire:loading wire:target="export('pdf')" class="loading loading-spinner loading-xs"></span>
                     </button>
                 </div>
             </div>
@@ -92,281 +96,281 @@
             </div>
         @endif
 
-        {{-- Table --}}
+        {{-- Table with horizontal scroll --}}
         <div class="card-body p-0">
             <div class="overflow-x-auto w-full">
-                <table class="table table-sm w-full">
-                    <thead class="bg-base-100 sticky top-0 z-20">
-                        {{-- Header --}}
-                        <tr class="bg-gradient-to-r from-base-200 to-base-300/90 backdrop-blur">
-                            <th class="px-3 py-2 text-[11px] font-semibold text-base-content/70 w-10">
-                                <span class="hidden sm:inline">#</span>
-                            </th>
-                            @foreach ($columns as $c)
-                                @php
-                                    $active = $sortField === ($c['field'] ?? '');
-                                    $sortable = $c['sortable'] ?? true;
-                                    $hideSm = $c['hide_sm'] ?? false;
-                                @endphp
-                                <th
-                                    class="px-3 py-2 text-[11px] uppercase tracking-wide text-base-content/60 {{ $hideSm ? 'hidden sm:table-cell' : '' }}">
-                                    @if ($sortable)
-                                        <button
-                                            class="btn btn-ghost btn-xs px-1 normal-case font-semibold text-base-content/80 hover:text-base-content"
-                                            wire:click="sortBy('{{ $c['field'] }}')">
-                                            <span>{{ $c['label'] ?? ucfirst($c['field']) }}</span>
-                                            @if ($active)
-                                                <span class="ml-1 text-[10px]">
-                                                    {{ $sortDirection === 'asc' ? '▲' : '▼' }}
+                <div class="inline-block min-w-full align-middle">
+                    <div class="overflow-x-auto shadow-sm">
+                        <table class="table table-sm w-full min-w-full">
+                            <thead class="bg-base-100 sticky top-0 z-20">
+                                {{-- Header --}}
+                                <tr class="bg-gradient-to-r from-base-200 to-base-300/90 backdrop-blur">
+                                    <th class="px-3 py-2 text-[11px] font-semibold text-base-content/70 w-10">
+                                        <span class="hidden sm:inline">#</span>
+                                    </th>
+                                    @foreach ($columns as $c)
+                                        @php
+                                            $active = $sortField === ($c['field'] ?? '');
+                                            $sortable = $c['sortable'] ?? true;
+                                            $hideSm = $c['hide_sm'] ?? false;
+                                        @endphp
+                                        <th
+                                            class="px-3 py-2 text-[11px] uppercase tracking-wide text-base-content/60 {{ $hideSm ? 'hidden sm:table-cell' : '' }}">
+                                            @if ($sortable)
+                                                <button
+                                                    class="btn btn-ghost btn-xs px-1 normal-case font-semibold text-base-content/80 hover:text-base-content whitespace-nowrap"
+                                                    wire:click="sortBy('{{ $c['field'] }}')">
+                                                    <span>{{ $c['label'] ?? ucfirst($c['field']) }}</span>
+                                                    @if ($active)
+                                                        <span class="ml-1 text-[10px]">
+                                                            {{ $sortDirection === 'asc' ? '▲' : '▼' }}
+                                                        </span>
+                                                    @endif
+                                                </button>
+                                            @else
+                                                <span class="font-semibold text-base-content/80 whitespace-nowrap">
+                                                    {{ $c['label'] ?? ucfirst($c['field']) }}
                                                 </span>
                                             @endif
-                                        </button>
-                                    @else
-                                        <span class="font-semibold text-base-content/80">
-                                            {{ $c['label'] ?? ucfirst($c['field']) }}
-                                        </span>
+                                        </th>
+                                    @endforeach
+
+                                    @if ($allowactios)
+                                        <th
+                                            class="px-3 py-2 text-[11px] font-semibold text-base-content/70 hidden sm:table-cell text-right whitespace-nowrap">
+                                            Actions
+                                        </th>
                                     @endif
-                                </th>
-                            @endforeach
+                                </tr>
 
-                            @if (!empty($this->actions()))
-                                <th
-                                    class="px-3 py-2 text-[11px] font-semibold text-base-content/70 hidden sm:table-cell text-right">
-                                    Actions
-                                </th>
-                            @endif
-                        </tr>
+                                {{-- Filters row (desktop) --}}
+                                <tr class="hidden sm:table-row bg-base-100/95 border-b border-base-200/80">
+                                    <th class="px-3 py-2"></th>
+                                    @foreach ($columns as $c)
+                                        @php
+                                            $field = $c['field'];
+                                            $ctype = $c['type'] ?? 'text';
+                                            $ftype =
+                                                $c['filter'] ??
+                                                ($ctype === 'boolean' ? 'boolean' : ($ctype === 'date' ? 'none' : 'text'));
+                                            $bind = $c['filter_key'] ?? str_replace('.', '__', $field);
+                                            $hideSm = $c['hide_sm'] ?? false;
+                                        @endphp
+                                        <th class="px-3 py-2 {{ $hideSm ? 'hidden sm:table-cell' : '' }}">
+                                            @if ($ftype === 'text')
+                                                <input type="text"
+                                                    class="input input-bordered input-xs w-full bg-base-100/90"
+                                                    placeholder="Filter {{ $c['label'] ?? $field }}"
+                                                    wire:model.live.debounce.300ms="filters.{{ $bind }}" />
+                                            @elseif ($ftype === 'boolean')
+                                                <select class="select select-bordered select-xs w-full bg-base-100/90"
+                                                    wire:model.live.debounce="filters.{{ $bind }}">
+                                                    <option value="">All</option>
+                                                    <option value="1">Yes</option>
+                                                    <option value="0">No</option>
+                                                </select>
+                                            @elseif ($ftype === 'select')
+                                                <select class="select select-bordered select-xs w-full bg-base-100/90"
+                                                    wire:model.live.debounce.150ms="filters.{{ $bind }}">
+                                                    <option value="">All</option>
+                                                    @foreach ($c['options'] ?? [] as $val => $label)
+                                                        <option value="{{ $val }}">{{ $label }}</option>
+                                                    @endforeach
+                                                </select>
+                                            @elseif ($ftype === 'date-range')
+                                                <div class="flex items-center gap-1">
+                                                    <select class="select select-bordered select-xs bg-base-100/90"
+                                                        wire:model.live="dateField" title="Filter by field">
+                                                        @foreach ($dateFields as $key => $label)
+                                                            <option value="{{ $key }}">{{ $label }}</option>
+                                                        @endforeach
+                                                    </select>
 
-                        {{-- Filters row (desktop) --}}
-                        <tr class="hidden sm:table-row bg-base-100/95 border-b border-base-200/80">
-                            <th class="px-3 py-2"></th>
-                            @foreach ($columns as $c)
-                                @php
-                                    $field = $c['field'];
-                                    $ctype = $c['type'] ?? 'text';
-                                    $ftype =
-                                        $c['filter'] ??
-                                        ($ctype === 'boolean' ? 'boolean' : ($ctype === 'date' ? 'none' : 'text'));
-                                    $bind = $c['filter_key'] ?? str_replace('.', '__', $field);
-                                    $hideSm = $c['hide_sm'] ?? false;
-                                @endphp
-                                <th class="px-3 py-2 {{ $hideSm ? 'hidden sm:table-cell' : '' }}">
-                                    @if ($ftype === 'text')
-                                        <input type="text"
-                                            class="input input-bordered input-xs w-full bg-base-100/90"
-                                            placeholder="Filter {{ $c['label'] ?? $field }}"
-                                            wire:model.live.debounce.300ms="filters.{{ $bind }}" />
-                                    @elseif ($ftype === 'boolean')
-                                        <select class="select select-bordered select-xs w-full bg-base-100/90"
-                                            wire:model.live.debounce="filters.{{ $bind }}">
-                                            <option value="">All</option>
-                                            <option value="1">Yes</option>
-                                            <option value="0">No</option>
-                                        </select>
-                                    @elseif ($ftype === 'select')
-                                        <select class="select select-bordered select-xs w-full bg-base-100/90"
-                                            wire:model.live.debounce.150ms="filters.{{ $bind }}">
-                                            <option value="">All</option>
-                                            @foreach ($c['options'] ?? [] as $val => $label)
-                                                <option value="{{ $val }}">{{ $label }}</option>
-                                            @endforeach
-                                        </select>
-                                    @elseif ($ftype === 'date-range')
-                                        <div class="flex items-center gap-1">
-                                            <select class="select select-bordered select-xs bg-base-100/90"
-                                                wire:model.live="dateField" title="Filter by field">
-                                                @foreach ($dateFields as $key => $label)
-                                                    <option value="{{ $key }}">{{ $label }}</option>
-                                                @endforeach
-                                            </select>
+                                                    <input type="date" class="input input-bordered input-xs bg-base-100/90"
+                                                        wire:model.live="dateFrom" title="From date" />
 
-                                            <input type="date" class="input input-bordered input-xs bg-base-100/90"
-                                                wire:model.live="dateFrom" title="From date" />
+                                                    <span class="text-[11px] text-base-content/60">→</span>
 
-                                            <span class="text-[11px] text-base-content/60">→</span>
+                                                    <input type="date" class="input input-bordered input-xs bg-base-100/90"
+                                                        wire:model.live="dateTo" title="To date" />
 
-                                            <input type="date" class="input input-bordered input-xs bg-base-100/90"
-                                                wire:model.live="dateTo" title="To date" />
-
-                                            <button class="btn btn-ghost btn-xs" wire:click="clearDateFilter"
-                                                title="Clear date filter">
-                                                ✕
-                                            </button>
-                                        </div>
-                                    @endif
-                                </th>
-                            @endforeach
-
-                            @if (!empty($this->actions()))
-                                <th class="px-3 py-2 hidden sm:table-cell"></th>
-                            @endif
-                        </tr>
-                    </thead>
-
-                    @forelse ($rows as $r)
-                        {{-- One tbody per row (stable scopes) --}}
-                        <tbody x-data="{ open: false }" wire:key="row-{{ $r->id }}" class="text-sm">
-                            <tr
-                                class="align-top transition-colors hover:bg-base-200/70 {{ $loop->odd ? 'row-odd' : 'row-even' }}">
-                                {{-- Index / expander --}}
-                                <td class="px-2 py-2 w-10">
-                                    <button class="sm:hidden btn btn-ghost btn-xs p-0" @click="open = !open"
-                                        :aria-expanded="open.toString()">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 transition-transform"
-                                            :class="open ? 'rotate-90' : ''" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd"
-                                                d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 111.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                                                clip-rule="evenodd" />
-                                        </svg>
-                                    </button>
-                                    <span class="hidden sm:inline mt-4 text-base-content/70 text-xs">
-                                        {{ ($rows->firstItem() ?? 0) + $loop->iteration - 1 }}
-                                    </span>
-                                </td>
-
-                                {{-- Data cells --}}
-                                @foreach ($columns as $c)
-                                    @php
-                                        $field = $c['field'];
-                                        $type = $c['type'] ?? 'text';
-                                        $val = data_get($r, $field);
-                                        $hideSm = $c['hide_sm'] ?? false;
-                                        $width = $c['width'] ?? 'max-w-xs';
-                                    @endphp
-                                    <td
-                                        class="px-3 py-2 whitespace-normal break-words text-xs {{ $hideSm ? 'hidden sm:table-cell' : '' }} {{ $width }}">
-                                        @if ($field === 'status')
-                                            @php $s = (string) $r->status; @endphp
-                                            <span
-                                                class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold
-                                                {{ $s === 'open'
-                                                    ? 'bg-info/10 text-info'
-                                                    : ($s === 'pending'
-                                                        ? 'bg-warning/10 text-warning'
-                                                        : ($s === 'approved'
-                                                            ? 'bg-success/10 text-success'
-                                                            : 'bg-error/10 text-error')) }}">
-                                                {{ ucfirst($s) }}
-                                            </span>
-                                        @elseif ($type === 'date' && !empty($c['format']) && $val)
-                                            {{ \Illuminate\Support\Carbon::parse($val)->format($c['format']) }}
-                                        @else
-                                            {{ $val }}
-                                        @endif
-                                    </td>
-                                @endforeach
-
-                                {{-- Actions (desktop) --}}
-                                @if (!empty($this->actions()))
-                                    <td class="px-3 py-2 whitespace-nowrap hidden sm:table-cell">
-                                        <div class="flex items-center justify-end gap-1">
-                                            @foreach ($this->actions() as $action)
-                                                @if ($action['type'] === 'route')
-                                                    <x-ui.link-button  wire:navigate
-                                                        variant="{{ $action['variant'] }}"
-                                                        href="{{ route($action['route'], $r->id) }}"
-                                                        title="{{ $action['label'] }}"
-                                                        class="{{ $action['class'] ?? '' }}">
-                                                        {{ $action['content'] }}
-                                                    </x-ui.link-button>
-                                                @elseif ($action['type'] === 'method')
-                                                    <x-ui.button type="button"
-                                                        variant="{{ $action['variant'] }}"
-                                                        wire:click="{{ $action['method'] }}({{ $r->id }})"
-                                                        title="{{ $action['label'] }}"
-                                                        class="{{ $action['class'] ?? '' }}">
-                                                        {{ $action['content'] }}
-
-                                                    </x-ui.button>
-                                                @endif
-                                            @endforeach
-                                        </div>
-                                    </td>
-                                @endif
-                            </tr>
-
-                            {{-- Mobile details --}}
-                            <tr x-show="open" x-cloak x-transition
-                                class="sm:hidden {{ $loop->odd ? 'row-odd' : 'row-even' }}">
-                                <td colspan="{{ count($columns) + (!empty($this->actions()) ? 2 : 1) }}"
-                                    class="px-4 pb-3">
-                                    <div class="rounded-xl border border-base-300/60 p-3 bg-base-200/40 space-y-3">
-                                        <dl class="space-y-2">
-                                            @foreach ($columns as $c)
-                                                @php
-                                                    $field = $c['field'];
-                                                    $type = $c['type'] ?? 'text';
-                                                    $val = data_get($r, $field);
-                                                @endphp
-                                                <div>
-                                                    <dt
-                                                        class="text-[11px] uppercase tracking-wide text-base-content/60">
-                                                        {{ $c['label'] ?? ucfirst($field) }}
-                                                    </dt>
-                                                    <dd class="text-sm">
-                                                        @if ($field === 'status')
-                                                            @php $s = (string) $r->status; @endphp
-                                                            <span
-                                                                class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold
-                                                                {{ $s === 'open'
-                                                                    ? 'bg-info/10 text-info'
-                                                                    : ($s === 'pending'
-                                                                        ? 'bg-warning/10 text-warning'
-                                                                        : ($s === 'approved'
-                                                                            ? 'bg-success/10 text-success'
-                                                                            : 'bg-error/10 text-error')) }}">
-                                                                {{ ucfirst($s) }}
-                                                            </span>
-                                                        @elseif ($type === 'date' && !empty($c['format']) && $val)
-                                                            {{ \Illuminate\Support\Carbon::parse($val)->format($c['format']) }}
-                                                        @else
-                                                            {{ $val }}
-                                                        @endif
-                                                    </dd>
+                                                    <button class="btn btn-ghost btn-xs" wire:click="clearDateFilter"
+                                                        title="Clear date filter">
+                                                        ✕
+                                                    </button>
                                                 </div>
-                                            @endforeach
-                                        </dl>
+                                            @endif
+                                        </th>
+                                    @endforeach
 
-                                        @if (!empty($this->actions()))
-                                            <div class="flex flex-wrap gap-1 justify-start">
-                                                @foreach ($this->actions() as $action)
-                                                    @if ($action['type'] === 'route')
-                                                        <x-ui.button  wire:navigate
-                                                        variant="{{ $action['variant'] }}"
-                                                        href="{{ route($action['route'], $r->id) }}"
-                                                        title="{{ $action['label'] }}"
-                                                        class="{{ $action['class'] ?? '' }}">
-                                                        {{ $action['content'] }}
-                                                        </x-ui.button>
-                                                    @elseif ($action['type'] === 'method')
-                                                        <x-ui.button type="button"
-                                                        variant="{{ $action['variant'] }}"  
-                                                        wire:click="{{ $action['method'] }}({{ $r->id }})"
-                                                        title="{{ $action['label'] }}"
-                                                        class="{{ $action['class'] ?? '' }}">
-                                                        {{ $action['content'] }}
+                                    @if ($allowactios)
+                                        <th class="px-3 py-2 hidden sm:table-cell"></th>
+                                    @endif
+                                </tr>
+                            </thead>
 
-                                                        </x-ui.button>
-                                                    @endif
-                                                @endforeach
-                                            </div>
+                            @forelse ($rows as $r)
+                                {{-- One tbody per row (stable scopes) --}}
+                                <tbody x-data="{ open: false, expanded: {} }" wire:key="row-{{ $r->id }}" class="text-sm">
+                                    <tr
+                                        class="align-top transition-colors hover:bg-base-200/70 {{ $loop->odd ? 'row-even' : '' }}">
+                                        {{-- Index / expander --}}
+                                        <td class="px-2 py-2 w-10">
+                                            <button class="sm:hidden btn btn-ghost btn-xs p-0" @click="open = !open"
+                                                :aria-expanded="open.toString()" type="button">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 transition-transform"
+                                                    :class="open ? 'rotate-90' : ''" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fill-rule="evenodd"
+                                                        d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 111.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                                                        clip-rule="evenodd" />
+                                                </svg>
+                                            </button>
+                                           
+                                            <span class="hidden sm:inline mt-4 text-base-content/70 text-xs">
+                                                {{ ($rows->firstItem() ?? 0) + $loop->iteration - 1 }}
+                                            </span>
+                                        </td>
+
+                                        {{-- Data cells --}}
+                                        @foreach ($columns as $c)
+                                            @php
+                                                $field = $c['field'];
+                                                $type = $c['type'] ?? 'text';
+                                                $val = data_get($r, $field);
+                                                $hideSm = $c['hide_sm'] ?? false;
+                                                $width = $c['width'] ?? 'max-w-xs';
+                                                $wordLimit = $c['word_limit'] ?? null;
+                                                $cellId = 'cell-' . $r->id . '-' . str_replace('.', '-', $field);
+                                                
+                                                // Format value
+                                                if ($type === 'date' && !empty($c['format']) && $val) {
+                                                    $displayVal = \Illuminate\Support\Carbon::parse($val)->format($c['format']);
+                                                } else {
+                                                    $displayVal = $val;
+                                                }
+                                                
+                                                // Word limiting logic
+                                                $needsTruncation = false;
+                                                $truncatedVal = $displayVal;
+                                                $fullVal = $displayVal;
+                                                
+                                                if ($wordLimit && is_string($displayVal)) {
+                                                    $words = explode(' ', $displayVal);
+                                                    if (count($words) > $wordLimit) {
+                                                        $needsTruncation = true;
+                                                        $truncatedVal = implode(' ', array_slice($words, 0, $wordLimit)) . '...';
+                                                        $fullVal = $displayVal;
+                                                    }
+                                                }
+                                            @endphp
+                                            <td
+                                                class="px-3 py-2 text-xs {{ $hideSm ? 'hidden sm:table-cell' : '' }} {{ $width }}">
+                                                @if ($needsTruncation)
+                                                    <div x-data="{ expanded: false }" class="break-words">
+                                                        <span x-show="!expanded" x-cloak>
+                                                            {{ e($truncatedVal) }}
+                                                        </span>
+                                                        <span x-show="expanded" x-cloak class="whitespace-normal">
+                                                            {{ e($fullVal) }}
+                                                        </span>
+                                                        <button 
+                                                            @click="expanded = !expanded" 
+                                                            type="button"
+                                                            class="text-primary hover:text-primary-focus font-medium ml-1 text-[11px] underline"
+                                                            x-text="expanded ? 'Show less' : 'Show more'">
+                                                        </button>
+                                                    </div>
+                                                @else
+                                                    <span class="break-words whitespace-normal">{{ e($displayVal) }}</span>
+                                                @endif
+                                            </td>
+                                        @endforeach
+
+                                        {{-- Actions (desktop) --}}
+                                        @if ($allowactios)
+                                            <td class="px-3 py-2 whitespace-nowrap hidden sm:table-cell">
+                                                @include($actionpath, ['r' => $r])
+                                            </td>
                                         @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    @empty
-                        <tbody>
-                            <tr>
-                                <td colspan="{{ count($columns) + (!empty($this->actions()) ? 2 : 1) }}">
-                                    <div class="p-6 text-center text-base-content/60 text-sm">
-                                        No results found. Try changing filters or search terms.
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    @endforelse
-                </table>
+                                    </tr>
+
+                                    {{-- Mobile details --}}
+                                    <tr x-show="open" x-cloak x-transition
+                                        class="sm:hidden {{ $loop->odd ? 'row-even' : '' }}">
+                                        <td colspan="{{ count($columns) + ($allowactios ? 2 : 1) }}"
+                                            class="px-4 pb-3">
+                                            <div class="rounded-xl border border-base-300/60 p-3 bg-base-200/40 space-y-3">
+                                                <dl class="space-y-2">
+                                                    @foreach ($columns as $c)
+                                                        @php
+                                                            $field = $c['field'];
+                                                            $type = $c['type'] ?? 'text';
+                                                            $val = data_get($r, $field);
+                                                     
+                                                            if ($type === 'date' && !empty($c['format']) && $val) {
+                                                                $displayVal = \Illuminate\Support\Carbon::parse($val)->format($c['format']);
+                                                            } else {
+                                                                $displayVal = $val;
+                                                            }
+                                                            
+                                                            $needsTruncation = false;
+                                                            $truncatedVal = $displayVal;
+                                                            $fullVal = $displayVal;
+                                                            
+                                                            
+                                                        @endphp
+                                                        <div>
+                                                            <dt
+                                                                class="text-[11px] uppercase tracking-wide text-base-content/60">
+                                                                {{ $c['label'] ?? ucfirst($field) }}
+                                                            </dt>
+                                                            <dd class="text-sm">
+                                                                @if ($needsTruncation)
+                                                                    <div x-data="{ mobileExpanded: false }">
+                                                                        <span x-show="!mobileExpanded">
+                                                                            {{ e($truncatedVal) }}
+                                                                        </span>
+                                                                        <span x-show="mobileExpanded" x-cloak>
+                                                                            {{ e($fullVal) }}
+                                                                        </span>
+                                                                        <button 
+                                                                            @click="mobileExpanded = !mobileExpanded" 
+                                                                            type="button"
+                                                                            class="text-primary hover:text-primary-focus font-medium ml-1 text-[11px] underline"
+                                                                            x-text="mobileExpanded ? 'Show less' : 'Show more'">
+                                                                        </button>
+                                                                    </div>
+                                                                @else
+                                                                    {{ e($displayVal) }}
+                                                                @endif
+                                                            </dd>
+                                                        </div>
+                                                    @endforeach
+                                                </dl>
+
+                                                @if ($allowactios)
+                                                    <div class="flex flex-wrap gap-1 justify-start">
+                                                        @include($actionpath, ['r' => $r])
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            @empty
+                                <tbody>
+                                    <tr>
+                                        <td colspan="{{ count($columns) + ($allowactios ? 2 : 1) }}">
+                                            <div class="p-6 text-center text-base-content/60 text-sm">
+                                                No results found. Try changing filters or search terms.
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            @endforelse
+                        </table>
+                    </div>
+                </div>
             </div>
 
             {{-- Pagination --}}

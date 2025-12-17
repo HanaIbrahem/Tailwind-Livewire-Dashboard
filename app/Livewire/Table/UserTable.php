@@ -4,22 +4,27 @@ namespace App\Livewire\Table;
 
 use App\Models\User;
 use Carbon\Carbon;
+use Livewire\Attributes\Locked;
 class UserTable extends DataTable
 {
     public string $title = 'Users';
 
-    public $sortbydate = false;
     public array $dateFields = [
         'created_at' => 'Uploaded at',
-        'start_date' => 'Start Date',
-        'end_date' => 'End Date',
-        'approved_at' => 'Approved at',
     ];
     public string $dateField = 'created_at';
 
     public ?string $dateFrom = null;
     public ?string $dateTo = null;
-    public ?string $dateApproved = null;
+
+
+    #[Locked]
+    public $sortbydate = false;
+    #[Locked]
+    public $allowactios = true;
+
+    #[Locked]
+    public $actionpath="includes.tables.user";
 
     protected $queryString = [
         'q' => ['except' => ''],
@@ -29,7 +34,6 @@ class UserTable extends DataTable
         'dateField' => ['except' => 'created_at'],
         'dateFrom' => ['except' => null],
         'dateTo' => ['except' => null],
-        'dateApproved' => ['except' => null],
     ];
 
 
@@ -42,7 +46,6 @@ class UserTable extends DataTable
         // Defaults: current month
         $this->dateFrom ??= Carbon::now()->startOfMonth()->toDateString();
         $this->dateTo ??= Carbon::now()->toDateString();
-        $this->dateApproved ??= Carbon::now()->toDateString();
     }
 
     public function updatedDateField(): void
@@ -57,10 +60,7 @@ class UserTable extends DataTable
     {
         $this->resetPage();
     }
-    public function updatedDateApproved(): void
-    {
-        $this->resetPage();
-    }
+   
 
     public function clearFilters(): void
     {
@@ -69,7 +69,6 @@ class UserTable extends DataTable
         $this->dateField = 'created_at';
         $this->dateFrom = Carbon::now()->startOfMonth()->toDateString();
         $this->dateTo = Carbon::now()->toDateString();
-        $this->dateApproved = Carbon::now()->toDateString();
     }
 
     protected function modelClass(): string
@@ -77,6 +76,10 @@ class UserTable extends DataTable
         return User::class;
     }
 
+    public function selectallrows()
+    {
+
+    }
 
     protected function columns(): array
     {
@@ -106,7 +109,8 @@ class UserTable extends DataTable
                 'search_on' => ['name'],
                 'filter_on' => ['name'],
                 'sortable' => false,
-                'hide_sm' => false,
+                'word_limit'=>10,
+                'hide_sm' => true,
                 'filter' => 'text',
             ],
             [
@@ -156,8 +160,6 @@ class UserTable extends DataTable
         $row = $model::findOrFail($id);
         $row->delete();
         $this->dispatch('toast', type: 'success', message: 'deleted successfully.');
-
-        $this->resetPage();
 
     }
 }

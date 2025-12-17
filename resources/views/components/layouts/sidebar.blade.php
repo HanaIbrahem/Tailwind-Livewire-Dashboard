@@ -138,9 +138,19 @@
         </div>
 
         <!-- Footer -->
-        <div class="p-3 border-t border-base-300/60">
-            {{-- <a class="text-primary font-bold justify-start w-full rounded-lg">Hi {{trim(auth()->user()->first_name. '
-        '.auth()->user()->last_name)}}</a> --}}
+   
+          <div class="p-3 border-t border-base-300/60">
+            <div class="flex items-center gap-2 text-sm">
+                <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-primary" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                </div>
+                <div class="overflow-hidden">
+                    <p class="font-semibold text-base-content truncate">User Name</p>
+                    <p class="text-xs text-base-content/60 truncate">user@email.com</p>
+                </div>
+            </div>
         </div>
     </aside>
 </div>
