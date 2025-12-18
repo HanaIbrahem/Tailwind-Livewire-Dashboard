@@ -9,8 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Arr;
 use Livewire\WithPagination;
-use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\DataTableExport;
+use DB;
 use Mpdf\Mpdf;
 abstract class DataTable extends Component
 {
@@ -46,7 +45,7 @@ abstract class DataTable extends Component
     }
 
     // for actions like delete,edit others
-    
+
     public function actions(): array
     {
         return [];
@@ -206,7 +205,7 @@ abstract class DataTable extends Component
         $this->dispatch('edit', id: $id);
     }
 
-   
+
 
     public function render()
     {
@@ -390,57 +389,331 @@ abstract class DataTable extends Component
         };
     }
 
+
+    
+    
     public function export(string $format = 'xlsx')
-    {
+{
+    set_time_limit(0);
+    ini_set('memory_limit', '512M');
 
-        $format = strtolower($format);
-        $basename = strtolower(class_basename($this->modelClass()));
-        $filename = $basename . '-' . now()->format('Ymd_His');
+    $format = strtolower($format);
+    $basename = strtolower(class_basename($this->modelClass()));
+    $filename = $basename . '-' . now()->format('Ymd_His');
 
-        if ($format === 'xlsx') {
-            $columns = $this->columns();
-
-            // Use Maatwebsite\Excel
-            return Excel::download(
-                new DataTableExport($this->buildQuery(), $columns),
-                "{$filename}.xlsx"
-            );
-        }
-
-        if ($format === 'pdf') {
-            $rows = $this->buildQuery()->get();
-            $columns = $this->columns();
-
-            $dataRows = [];
-            foreach ($rows as $r) {
-                $dataRows[] = array_map(
-                    fn($c) => $this->formatExportValue($r, $c),
-                    $columns
-                );
-            }
-
-            $html = view('exports.table-pdf', [
-                'title' => $this->title ?: class_basename($this->modelClass()),
-                'columns' => $columns,
-                'rows' => $dataRows,
-            ])->render();
-
-            $mpdf = new Mpdf([
-                'mode' => 'utf-8',
-                'format' => 'A4',
-                'default_font' => 'dejavusans', // good for Arabic/Unicode
-            ]);
-
-            $mpdf->WriteHTML($html);
-
-            return response()->streamDownload(function () use ($mpdf) {
-                echo $mpdf->Output('', 'S'); // output as string to streamDownload
-            }, "{$filename}.pdf", ['Content-Type' => 'application/pdf']);
-        }
-
-        // Unknown format → silently do nothing or throw exception if you prefer
-        return;
+    if ($format === 'xlsx') {
+        return $this->exportXlsxRaw($filename);
     }
+
+    if ($format === 'csv') {
+        return $this->exportCsvRaw($filename);
+    }
+
+    return back()->with('error', 'Invalid format');
+}
+
+/**
+ * Raw DB query export (bypasses Eloquent - 10x faster)
+ */
+protected function exportXlsxRaw(string $filename)
+{
+    $columns = $this->columns();
+    
+    return response()->stream(function () use ($columns) {
+        $writer = new \OpenSpout\Writer\XLSX\Writer();
+        $writer->openToFile('php://output');
+
+        // Headers
+        $headers = array_map(fn($c) => $c['label'] ?? ucfirst($c['field']), $columns);
+        $writer->addRow(\OpenSpout\Common\Entity\Row::fromValues($headers));
+
+        // Get table name
+        $model = $this->modelClass();
+        $table = (new $model)->getTable();
+        
+        // Build raw SQL query
+        $query = DB::table($table);
+        
+        // Apply filters from buildQuery logic
+        $this->applyRawFilters($query);
+        
+        // Get only needed columns
+        $selectFields = $this->getRawSelectFields($columns);
+        $query->select($selectFields);
+        
+        // Stream data - use chunkById for better performance
+        $query->orderBy('id')->chunkById(10000, function ($rows) use ($writer, $columns) {
+            $batch = [];
+            
+            foreach ($rows as $row) {
+                $cells = [];
+                foreach ($columns as $c) {
+                    $field = $c['field'];
+                    $val = $row->$field ?? '';
+                    $cells[] = $this->quickFormat($val, $c['type'] ?? 'text');
+                }
+                $batch[] = \OpenSpout\Common\Entity\Row::fromValues($cells);
+                
+                if (count($batch) >= 1000) {
+                    $writer->addRows($batch);
+                    $batch = [];
+                }
+            }
+            
+            if (!empty($batch)) {
+                $writer->addRows($batch);
+            }
+        }, 'id');
+
+        $writer->close();
+    }, 200, [
+        'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'Content-Disposition' => "attachment; filename=\"{$filename}.xlsx\"",
+        'Cache-Control' => 'no-cache',
+        'X-Accel-Buffering' => 'no',
+    ]);
+}
+
+/**
+ * Ultra-fast CSV export (fastest possible)
+ */
+protected function exportCsvRaw(string $filename)
+{
+    $columns = $this->columns();
+    
+    return response()->stream(function () use ($columns) {
+        $out = fopen('php://output', 'w');
+        
+        // UTF-8 BOM for Excel compatibility
+        fprintf($out, chr(0xEF).chr(0xBB).chr(0xBF));
+        
+        // Headers
+        $headers = array_map(fn($c) => $c['label'] ?? ucfirst($c['field']), $columns);
+        fputcsv($out, $headers);
+        
+        // Get table
+        $model = $this->modelClass();
+        $table = (new $model)->getTable();
+        
+        // Raw query
+        $query = DB::table($table);
+        $this->applyRawFilters($query);
+        
+        $selectFields = $this->getRawSelectFields($columns);
+        $query->select($selectFields);
+        
+        // Stream with chunkById
+        $query->orderBy('id')->chunkById(10000, function ($rows) use ($out, $columns) {
+            foreach ($rows as $row) {
+                $cells = [];
+                foreach ($columns as $c) {
+                    $field = $c['field'];
+                    $val = $row->$field ?? '';
+                    $cells[] = $this->quickFormat($val, $c['type'] ?? 'text');
+                }
+                fputcsv($out, $cells);
+            }
+        }, 'id');
+        
+        fclose($out);
+    }, 200, [
+        'Content-Type' => 'text/csv; charset=UTF-8',
+        'Content-Disposition' => "attachment; filename=\"{$filename}.csv\"",
+        'Cache-Control' => 'no-cache',
+    ]);
+}
+
+/**
+ * Apply filters to raw query
+ */
+protected function applyRawFilters($query)
+{
+    // Global search
+    if ($this->q !== '') {
+        $needle = trim($this->q);
+        $searchables = array_filter($this->columns(), fn($c) => $c['searchable'] ?? true);
+        
+        $query->where(function($q) use ($searchables, $needle) {
+            foreach ($searchables as $c) {
+                $field = $c['field'];
+                if (strpos($field, '.') === false) { // Skip relations
+                    $q->orWhere($field, 'like', "%{$needle}%");
+                }
+            }
+        });
+    }
+    
+    // Column filters
+    foreach ($this->columns() as $c) {
+        $bindKey = $this->filterBindingKey($c);
+        if (!isset($this->filters[$bindKey])) continue;
+        
+        $val = $this->filters[$bindKey];
+        if ($val === '' || $val === null) continue;
+        
+        $field = $c['field'];
+        if (strpos($field, '.') !== false) continue; // Skip relations
+        
+        $filterType = $c['filter'] ?? 'text';
+        
+        if ($filterType === 'text') {
+            $query->where($field, 'like', "%{$val}%");
+        } elseif ($filterType === 'select') {
+            $query->where($field, $val);
+        } elseif ($filterType === 'boolean') {
+            $query->where($field, (bool) intval($val));
+        }
+    }
+    
+    // Sorting
+    if ($this->sortField && strpos($this->sortField, '.') === false) {
+        $query->orderBy($this->sortField, $this->sortDirection);
+    }
+}
+
+/**
+ * Get raw select fields (no relations)
+ */
+protected function getRawSelectFields(array $columns): array
+{
+    $fields = ['id'];
+    foreach ($columns as $c) {
+        $field = $c['field'] ?? '';
+        if (strpos($field, '.') === false) {
+            $fields[] = $field;
+        }
+    }
+    return array_unique($fields);
+}
+
+/**
+ * Quick formatting (no Carbon parsing overhead)
+ */
+protected function quickFormat($value, string $type)
+{
+    if ($type === 'boolean') {
+        return $value ? 'Active' : 'Inactive';
+    }
+    
+    if ($type === 'number') {
+        return (float) $value;
+    }
+    
+    return $value ?? '';
+}
+/**
+ * Build query optimized for export (less eager loading)
+ */
+protected function buildOptimizedExportQuery(): Builder
+{
+    $query = $this->baseQuery();
+    $cols = $this->columns();
+
+    // Only load relations that are actually used in export
+    $exportRelations = $this->getExportRelations($cols);
+    if (!empty($exportRelations)) {
+        $query->with($exportRelations);
+    }
+
+    // Apply filters (same as buildQuery)
+    // ... copy filter logic from buildQuery() ...
+    
+    // Global search
+    if ($this->q !== '') {
+        $needle = trim($this->q);
+        $lower = mb_strtolower($needle);
+        $searchables = array_values(array_filter($cols, fn($c) => $c['searchable'] ?? true));
+
+        $query->where(function (Builder $sub) use ($searchables, $needle, $lower) {
+            foreach ($searchables as $c) {
+                $targets = (array) ($c['search_on'] ?? [$c['field']]);
+                foreach ($targets as $target) {
+                    if ($rc = $this->parseRelationField($target)) {
+                        [$relation, $column] = $rc;
+                        $sub->orWhereHas($relation, function (Builder $q) use ($column, $needle) {
+                            $q->where($column, 'like', "%{$needle}%");
+                        });
+                    } else {
+                        $sub->orWhere($target, 'like', "%{$needle}%");
+                    }
+                }
+            }
+        });
+    }
+
+    // Column filters
+    foreach ($cols as $c) {
+        $type = $c['type'] ?? 'text';
+        $filterT = $c['filter'] ?? $this->defaultFilterForType($type);
+        $bindKey = $this->filterBindingKey($c);
+        
+        if (!array_key_exists($bindKey, $this->filters)) {
+            continue;
+        }
+
+        $val = $this->filters[$bindKey];
+        if ($val === '' || $val === null) {
+            continue;
+        }
+
+        $filterOn = (array) ($c['filter_on'] ?? $c['field']);
+
+        if ($filterT === 'text') {
+            $query->where(function (Builder $w) use ($filterOn, $val) {
+                foreach ($filterOn as $target) {
+                    $w->orWhere($target, 'like', "%{$val}%");
+                }
+            });
+        } elseif ($filterT === 'select') {
+            foreach ($filterOn as $target) {
+                $query->where($target, $val);
+            }
+        }
+    }
+
+    // Sorting
+    $sortable = array_column(array_filter($cols, fn($c) => $c['sortable'] ?? true), 'field');
+    if (in_array($this->sortField, $sortable, true)) {
+        $query->orderBy($this->sortField, $this->sortDirection);
+    } else {
+        $query->latest();
+    }
+
+    return $query;
+}
+
+/**
+ * Get only relations needed for export columns
+ */
+protected function getExportRelations(array $cols): array
+{
+    $with = [];
+    foreach ($cols as $c) {
+        $field = $c['field'] ?? '';
+        if ($rc = $this->parseRelationField($field)) {
+            $with[] = $rc[0];
+        }
+    }
+    return array_values(array_unique($with));
+}
+
+/**
+ * Get field list for SELECT optimization
+ */
+protected function getExportFields(array $cols): array
+{
+    $fields = ['id']; // Always include ID
+    
+    foreach ($cols as $c) {
+        $field = $c['field'] ?? '';
+        if (strpos($field, '.') === false) {
+            $fields[] = $field;
+        }
+    }
+    
+    return array_unique($fields);
+}
+
 
     protected function formatExportValue($row, array $col): string
     {

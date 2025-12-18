@@ -1,4 +1,4 @@
 <div>
-    <livewire:table.user-table />
+    <livewire:table.post-table/>
     
 </div>

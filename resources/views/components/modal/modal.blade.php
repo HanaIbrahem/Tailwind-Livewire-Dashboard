@@ -31,13 +31,19 @@
             <h3 class="text-lg font-bold">{{ $header }}</h3>
             <p class="py-4">{{ $message }}</p>
 
+            <div>
+                {{ $slot }}
+            </div>
             {{-- specific button in there   --}}
             <div class=" flex justify-end">
 
 
-
                 {{-- content on modla that we passed appear here --}}
-                {{ $slot }}
+                @if(isset($buttonslot))
+                    
+
+                {{ $buttonslot }}
+                @endif
 
 
             </div>

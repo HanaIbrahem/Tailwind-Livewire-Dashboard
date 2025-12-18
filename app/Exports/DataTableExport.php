@@ -3,22 +3,27 @@
 namespace App\Exports;
 
 use Illuminate\Database\Eloquent\Builder;
-use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\FromQuery;
-use Maatwebsite\Excel\Concerns\Exportable;
-use Illuminate\Database\Eloquent\Builder as Builders;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
-class DataTableExport implements FromQuery,WithHeadings,WithMapping
-{
-    use Exportable;
+use Maatwebsite\Excel\Concerns\WithChunkReading;
+use Maatwebsite\Excel\Concerns\ShouldAutoSize;
 
+class DataTableExport implements 
+    FromQuery, 
+    WithHeadings, 
+    WithMapping, 
+    WithChunkReading,
+    ShouldAutoSize
+{
     public function __construct(
-        protected Builders $query,
+        protected Builder $query,
         protected array $columns,
-    ){}
-    public function query(): Builders
+    ) {}
+
+    public function query(): Builder
     {
+        // Return the query as-is (with eager loading already applied)
         return $this->query;
     }
     
@@ -42,8 +47,15 @@ class DataTableExport implements FromQuery,WithHeadings,WithMapping
     }
 
     /**
-     * Same logic as your DataTable::formatExportValue()
-     * (you can move this to a trait if you want to reuse).
+     * Process records in chunks to reduce memory usage
+     */
+    public function chunkSize(): int
+    {
+        return 1000; // Adjust based on your data complexity
+    }
+
+    /**
+     * Format cell values for export
      */
     protected function formatExportValue($row, array $col): string
     {
@@ -68,13 +80,5 @@ class DataTableExport implements FromQuery,WithHeadings,WithMapping
         return is_scalar($val) || $val === null
             ? (string) $val
             : json_encode($val, JSON_UNESCAPED_UNICODE);
-    }
-    /**
-    * @return \Illuminate\Support\Collection
-    */
-    public function collection()
-    {
-        //
-        return '';
     }
 }

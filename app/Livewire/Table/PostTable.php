@@ -2,12 +2,14 @@
 
 namespace App\Livewire\Table;
 
+use App\Models\Post;
 use App\Models\User;
 use Carbon\Carbon;
 use Livewire\Attributes\Locked;
-class UserTable extends DataTable
+
+class PostTable extends DataTable
 {
-    public string $title = 'Users';
+   public string $title = 'Posts';
 
     public array $dateFields = [
         'created_at' => 'Uploaded at',
@@ -22,16 +24,17 @@ class UserTable extends DataTable
     public $sortbydate = false;
     #[Locked]
     public $allowactios = true;
+
+    #[Locked]
+    public $allowselection = true;
+    #[Locked]
+    public $actionpath="includes.tables.post.row";
+
+    #[Locked]
+    public $allowselectionpath="includes.tables.post.select";
+
+
     
-    #[Locked]
-    public $allowselection = false;
-
-    #[Locked]
-    public $actionpath="includes.tables.user.row";
-
-    #[Locked]
-    public $allowselectionpath="includes.tables.user.selec";
-
     protected $queryString = [
         'q' => ['except' => ''],
         'sortField' => ['except' => 'id'],
@@ -79,7 +82,7 @@ class UserTable extends DataTable
 
     protected function modelClass(): string
     {
-        return User::class;
+        return Post::class;
     }
 
     
@@ -98,20 +101,20 @@ class UserTable extends DataTable
                 'filter' => 'text',
             ],
             [
-                'field' => 'email',
-                'label' => 'Email',
-                'search_on' => false,
-                'filter_on' => ['email'],
+                'field' => 'title',
+                'label' => 'Title',
+                'search_on' => 'title',
+                'filter_on' => ['title'],
                 'sortable' => false,
                 'hide_sm' => false,
                 'filter' => 'none',
             ],
             [
-                'field' => 'name',
-                'label' => 'Employee',
-                'search_on' => ['name'],
-                'filter_on' => ['name'],
-                'sortable' => false,
+                'field' => 'content',
+                'label' => 'content',
+                'search_on' => ['content'],
+                'filter_on' => ['content'],
+                'sortable' => true,
                 'word_limit'=>10,
                 'hide_sm' => true,
                 'filter' => 'text',
@@ -128,6 +131,12 @@ class UserTable extends DataTable
     }
 
 
+    public function deleteall( $ids)
+    {
+
+        dd($ids);
+        return $ids;
+    }
 
     public function delete($id)
     {

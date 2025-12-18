@@ -14,7 +14,8 @@
         "laravel/tinker": "^2.10.1",
         "livewire/livewire": "^3.7",
         "maatwebsite/excel": "^3.1",
-        "mpdf/mpdf": "^8.2"
+        "mpdf/mpdf": "^8.2",
+        "openspout/openspout": "^4.28"
     },
     "require-dev": {
         "barryvdh/laravel-debugbar": "*",
